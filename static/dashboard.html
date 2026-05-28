@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lead Distribution Dashboard</title>
+<style>
+  :root[data-theme="dark"] {
+    --bg: #0b1120;
+    --panel: #111827;
+    --panel-2: #1f2937;
+    --text: #f9fafb;
+    --muted: #9ca3af;
+    --border: #1f2937;
+    --primary: #6366f1;
+    --primary-text: #ffffff;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+    --row-hover: rgba(99,102,241,0.05);
+    --new-row-from: rgba(99,102,241,0.3);
+    --pill-blue-bg: rgba(59,130,246,0.15); --pill-blue-fg: #93c5fd;
+    --pill-gray-bg: rgba(156,163,175,0.15); --pill-gray-fg: #d1d5db;
+    --pill-amber-bg: rgba(245,158,11,0.15); --pill-amber-fg: #fcd34d;
+    --pill-green-bg: rgba(16,185,129,0.15); --pill-green-fg: #6ee7b7;
+    --pill-red-bg: rgba(239,68,68,0.15); --pill-red-fg: #fca5a5;
+    --link: #818cf8;
+  }
+  :root[data-theme="light"] {
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --panel-2: #f1f5f9;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --primary: #6366f1;
+    --primary-text: #ffffff;
+    --success: #059669;
+    --warning: #d97706;
+    --error: #dc2626;
+    --info: #2563eb;
+    --row-hover: rgba(99,102,241,0.06);
+    --new-row-from: rgba(99,102,241,0.18);
+    --pill-blue-bg: #dbeafe; --pill-blue-fg: #1d4ed8;
+    --pill-gray-bg: #e5e7eb; --pill-gray-fg: #374151;
+    --pill-amber-bg: #fef3c7; --pill-amber-fg: #92400e;
+    --pill-green-bg: #d1fae5; --pill-green-fg: #065f46;
+    --pill-red-bg: #fee2e2; --pill-red-fg: #991b1b;
+    --link: #4f46e5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  nav a.active, nav a:hover { color: var(--text); background: var(--panel-2); }
+  .theme-toggle {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .theme-toggle:hover { opacity: 0.85; }
+  header .live-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .ws-status { font-size: 12px; color: var(--muted); }
+  main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+  .badges {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .badge {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .badge .label {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .badge .value { font-size: 26px; font-weight: 700; }
+  .badge .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .badge .value.green { color: var(--success); }
+  .badge .value.red { color: var(--error); }
+
+  .router-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .router-panel h3 { margin: 0 0 4px; font-size: 14px; }
+  .router-panel .desc { color: var(--muted); font-size: 12px; }
+  .router-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 500; margin-left: 8px;
+  }
+  .router-status.on { background: var(--pill-green-bg); color: var(--pill-green-fg); }
+  .router-status.off { background: var(--pill-red-bg); color: var(--pill-red-fg); }
+  .router-status .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .toggle-btn {
+    padding: 8px 16px; background: var(--primary);
+    border: none; color: var(--primary-text);
+    border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 13px;
+  }
+  .toggle-btn:hover { opacity: 0.9; }
+  .mode-chip {
+    background: var(--panel-2); padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; color: var(--muted); margin-left: 8px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .table-header h3 { margin: 0; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    padding: 12px 16px; text-align: left; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    color: var(--muted); font-weight: 500; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--panel-2);
+  }
+  tbody tr:hover { background: var(--row-hover); }
+  tbody tr.new { animation: highlight 1.5s ease-out; }
+  @keyframes highlight {
+    0% { background: var(--new-row-from); }
+    100% { background: transparent; }
+  }
+  .pill {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 500; text-transform: capitalize;
+  }
+  .pill-received, .pill-validated { background: var(--pill-blue-bg); color: var(--pill-blue-fg); }
+  .pill-pending { background: var(--pill-gray-bg); color: var(--pill-gray-fg); }
+  .pill-syncing { background: var(--pill-amber-bg); color: var(--pill-amber-fg); }
+  .pill-synced { background: var(--pill-green-bg); color: var(--pill-green-fg); }
+  .pill-failed { background: var(--pill-red-bg); color: var(--pill-red-fg); }
+  .empty { padding: 48px; text-align: center; color: var(--muted); font-size: 14px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .truncate { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .retry-btn {
+    padding: 4px 10px; background: var(--primary); color: var(--primary-text);
+    border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500;
+  }
+  .retry-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .err-text {
+    color: var(--error); font-size: 10px; margin-top: 2px;
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Lead Distribution Dashboard</h1>
+    <div class="header-right">
+      <nav>
+        <a href="/dashboard" class="active">Dashboard</a>
+        <a href="/logs">Logs</a>
+        <a href="/">Form</a>
+      </nav>
+      <span class="ws-status"><span class="live-dot"></span><span id="wsStatus">Connecting…</span></span>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="badges">
+      <div class="badge">
+        <div class="label">Total Leads</div>
+        <div class="value" id="totalLeads">0</div>
+        <div class="sub">All time</div>
+      </div>
+      <div class="badge">
+        <div class="label">Pipeline Value</div>
+        <div class="value" id="pipelineValue">$0</div>
+        <div class="sub">Estimated</div>
+      </div>
+      <div class="badge">
+        <div class="label">Synced to HubSpot</div>
+        <div class="value green" id="syncedCount">0</div>
+        <div class="sub">Successful</div>
+      </div>
+      <div class="badge">
+        <div class="label">Sync Failures</div>
+        <div class="value red" id="failedCount">0</div>
+        <div class="sub">Needs retry</div>
+      </div>
+    </div>
+
+    <div class="router-panel">
+      <div>
+        <h3>
+          HubSpot Router
+          <span id="routerStatus" class="router-status on"><span class="dot"></span>Connected</span>
+          <span class="mode-chip" id="modeChip">mock</span>
+        </h3>
+        <div class="desc">Toggle to simulate HubSpot connection state. New leads will be marked accordingly.</div>
+      </div>
+      <button class="toggle-btn" id="toggleBtn">Disconnect</button>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-header"><h3>Live Lead Feed</h3></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Company</th>
+            <th>Budget</th>
+            <th>Value</th>
+            <th>Local</th>
+            <th>HubSpot</th>
+            <th>Contact ID</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="leadsTbody">
+          <tr><td colspan="10" class="empty">No leads yet. <a href="/" style="color:var(--link)">Submit one →</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+<script>
+  // ---------- Theme ----------
+  const themeToggle = document.getElementById("themeToggle");
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    themeToggle.textContent = theme === "dark" ? "🌙" : "☀️";
+    try { localStorage.setItem("theme", theme); } catch {}
+  }
+  const savedTheme = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();
+  applyTheme(savedTheme || "dark");
+  themeToggle.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+  });
+
+  // ---------- DOM refs ----------
+  const leadsTbody = document.getElementById("leadsTbody");
+  const wsStatus = document.getElementById("wsStatus");
+  const totalLeadsEl = document.getElementById("totalLeads");
+  const pipelineEl = document.getElementById("pipelineValue");
+  const syncedEl = document.getElementById("syncedCount");
+  const failedEl = document.getElementById("failedCount");
+  const routerStatusEl = document.getElementById("routerStatus");
+  const modeChipEl = document.getElementById("modeChip");
+  const toggleBtn = document.getElementById("toggleBtn");
+
+  let leads = [];
+
+  function fmtMoney(n) {
+    return "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  }
+  function fmtTime(iso) {
+    try { return new Date(iso + "Z").toLocaleString(); } catch { return iso; }
+  }
+  function escape(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function renderStats() {
+    totalLeadsEl.textContent = leads.length;
+    const pipe = leads.reduce((s, l) => s + (l.estimated_value || 0), 0);
+    pipelineEl.textContent = fmtMoney(pipe);
+    syncedEl.textContent = leads.filter(l => l.hubspot_status === "synced").length;
+    failedEl.textContent = leads.filter(l => l.hubspot_status === "failed").length;
+  }
+
+  function actionCell(l) {
+    if (l.hubspot_status === "failed") {
+      return `<button class="retry-btn" data-id="${l.id}">Retry</button>`;
+    }
+    if (l.hubspot_status === "syncing") {
+      return `<span style="color:var(--muted);font-size:11px">…syncing</span>`;
+    }
+    return '—';
+  }
+
+  function renderLeads(highlightId) {
+    if (leads.length === 0) {
+      leadsTbody.innerHTML = `<tr><td colspan="10" class="empty">No leads yet. <a href="/" style="color:var(--link)">Submit one →</a></td></tr>`;
+      return;
+    }
+    leadsTbody.innerHTML = leads.map(l => `
+      <tr class="${l.id === highlightId ? 'new' : ''}">
+        <td>${escape(l.first_name)} ${escape(l.last_name)}</td>
+        <td class="truncate" title="${escape(l.email)}">${escape(l.email)}</td>
+        <td>${escape(l.company)}</td>
+        <td>${escape(l.budget)}</td>
+        <td>${fmtMoney(l.estimated_value)}</td>
+        <td><span class="pill pill-${l.local_status}">${l.local_status}</span></td>
+        <td>
+          <span class="pill pill-${l.hubspot_status}">${l.hubspot_status}</span>
+          ${l.hubspot_error ? `<div class="err-text" title="${escape(l.hubspot_error)}">${escape(l.hubspot_error.slice(0,40))}</div>` : ''}
+        </td>
+        <td class="mono">${l.hubspot_contact_id || '—'}</td>
+        <td class="mono">${fmtTime(l.created_at)}</td>
+        <td>${actionCell(l)}</td>
+      </tr>
+    `).join("");
+  }
+
+  leadsTbody.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".retry-btn");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    btn.disabled = true; btn.textContent = "…";
+    try {
+      await fetch(`/api/leads/${id}/retry`, { method: "POST" });
+    } catch {
+      btn.disabled = false; btn.textContent = "Retry";
+    }
+  });
+
+  function upsertLead(lead) {
+    const idx = leads.findIndex(l => l.id === lead.id);
+    if (idx >= 0) leads[idx] = lead;
+    else leads.unshift(lead);
+  }
+
+  function applyHubspotStatus(s) {
+    if (s.connected) {
+      routerStatusEl.className = "router-status on";
+      routerStatusEl.innerHTML = '<span class="dot"></span>Connected';
+      toggleBtn.textContent = "Disconnect";
+    } else {
+      routerStatusEl.className = "router-status off";
+      routerStatusEl.innerHTML = '<span class="dot"></span>Disconnected';
+      toggleBtn.textContent = "Reconnect";
+    }
+    modeChipEl.textContent = s.mode;
+  }
+
+  toggleBtn.addEventListener("click", async () => {
+    toggleBtn.disabled = true;
+    try {
+      const r = await fetch("/api/hubspot/toggle", { method: "POST" });
+      applyHubspotStatus(await r.json());
+    } finally {
+      toggleBtn.disabled = false;
+    }
+  });
+
+  // ----- WebSocket -----
+  let ws;
+  function connect() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen = () => { wsStatus.textContent = "Live"; };
+    ws.onclose = () => {
+      wsStatus.textContent = "Reconnecting…";
+      setTimeout(connect, 1500);
+    };
+    ws.onerror = () => { wsStatus.textContent = "Error"; };
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "snapshot") {
+        leads = msg.leads || [];
+        applyHubspotStatus(msg.hubspot);
+        renderLeads(); renderStats();
+      } else if (msg.type === "lead.created") {
+        upsertLead(msg.lead);
+        renderLeads(msg.lead.id); renderStats();
+      } else if (msg.type === "lead.updated") {
+        upsertLead(msg.lead);
+        renderLeads(); renderStats();
+      } else if (msg.type === "hubspot.status") {
+        applyHubspotStatus(msg.status);
+      }
+    };
+  }
+  connect();
+</script>
+</body>
+</html>

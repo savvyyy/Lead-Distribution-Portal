@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sync Logs — Lead Portal</title>
+<style>
+  :root[data-theme="dark"] {
+    --bg: #0b1120; --panel: #111827; --panel-2: #1f2937;
+    --text: #f9fafb; --muted: #9ca3af; --border: #1f2937;
+    --primary: #6366f1; --primary-text: #fff;
+    --success: #10b981; --error: #ef4444;
+    --row-hover: rgba(99,102,241,0.05);
+    --pill-green-bg: rgba(16,185,129,0.15); --pill-green-fg: #6ee7b7;
+    --pill-red-bg: rgba(239,68,68,0.15); --pill-red-fg: #fca5a5;
+    --pill-gray-bg: rgba(156,163,175,0.15); --pill-gray-fg: #d1d5db;
+    --err-bg: rgba(239,68,68,0.08); --err-border: rgba(239,68,68,0.3);
+    --link: #818cf8;
+  }
+  :root[data-theme="light"] {
+    --bg: #f8fafc; --panel: #ffffff; --panel-2: #f1f5f9;
+    --text: #0f172a; --muted: #64748b; --border: #e2e8f0;
+    --primary: #6366f1; --primary-text: #fff;
+    --success: #059669; --error: #dc2626;
+    --row-hover: rgba(99,102,241,0.06);
+    --pill-green-bg: #d1fae5; --pill-green-fg: #065f46;
+    --pill-red-bg: #fee2e2; --pill-red-fg: #991b1b;
+    --pill-gray-bg: #e5e7eb; --pill-gray-fg: #374151;
+    --err-bg: #fef2f2; --err-border: #fecaca;
+    --link: #4f46e5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  header {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 16px 28px; display: flex; justify-content: space-between;
+    align-items: center; gap: 16px;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  nav a {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 6px 10px; border-radius: 6px;
+  }
+  nav a.active, nav a:hover { color: var(--text); background: var(--panel-2); }
+  .theme-toggle {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .ws-status { font-size: 12px; color: var(--muted); }
+  .live-dot {
+    display: inline-block; width: 8px; height: 8px; background: var(--success);
+    border-radius: 50%; margin-right: 8px; animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+  .summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .stat .label {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+  }
+  .stat .value { font-size: 26px; font-weight: 700; }
+  .stat .value.green { color: var(--success); }
+  .stat .value.red { color: var(--error); }
+
+  .filter-bar {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 20px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .filter-bar label { font-size: 13px; color: var(--muted); }
+  .seg {
+    display: inline-flex; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .seg button {
+    background: transparent; border: none; color: var(--muted);
+    padding: 6px 14px; font-size: 13px; cursor: pointer;
+  }
+  .seg button.active {
+    background: var(--primary); color: var(--primary-text); font-weight: 500;
+  }
+  .refresh-btn {
+    margin-left: auto; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+
+  .table-wrap {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    padding: 12px 16px; text-align: left; font-size: 13px;
+    border-bottom: 1px solid var(--border); vertical-align: top;
+  }
+  th {
+    color: var(--muted); font-weight: 500; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--panel-2);
+  }
+  tbody tr:hover { background: var(--row-hover); }
+  .pill {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+  }
+  .pill-success { background: var(--pill-green-bg); color: var(--pill-green-fg); }
+  .pill-failed  { background: var(--pill-red-bg); color: var(--pill-red-fg); }
+  .pill-mode    { background: var(--pill-gray-bg); color: var(--pill-gray-fg); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .err-box {
+    background: var(--err-bg); border: 1px solid var(--err-border);
+    border-radius: 6px; padding: 8px 10px; color: var(--error);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; line-height: 1.4; max-width: 480px;
+    word-break: break-word; white-space: pre-wrap;
+  }
+  .retry-btn {
+    padding: 4px 10px; background: var(--primary); color: var(--primary-text);
+    border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500;
+  }
+  .retry-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .empty { padding: 48px; text-align: center; color: var(--muted); font-size: 14px; }
+  .sub { color: var(--muted); font-size: 11px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Sync Logs</h1>
+    <div class="header-right">
+      <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logs" class="active">Logs</a>
+        <a href="/">Form</a>
+      </nav>
+      <span class="ws-status"><span class="live-dot"></span><span id="wsStatus">Connecting…</span></span>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="summary">
+      <div class="stat">
+        <div class="label">Total Attempts</div>
+        <div class="value" id="totalAttempts">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Successful</div>
+        <div class="value green" id="successCount">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Failed</div>
+        <div class="value red" id="failedCount">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Success Rate</div>
+        <div class="value" id="successRate">—</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <label>Show:</label>
+      <div class="seg">
+        <button data-filter="all" class="active">All</button>
+        <button data-filter="failed">Failed only</button>
+        <button data-filter="success">Successful only</button>
+      </div>
+      <button class="refresh-btn" id="refreshBtn">Refresh</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Lead</th>
+            <th>Attempt</th>
+            <th>Status</th>
+            <th>Mode</th>
+            <th>Contact ID</th>
+            <th>Error</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="logsBody">
+          <tr><td colspan="8" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+<script>
+  // ---------- Theme ----------
+  const themeToggle = document.getElementById("themeToggle");
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    themeToggle.textContent = theme === "dark" ? "🌙" : "☀️";
+    try { localStorage.setItem("theme", theme); } catch {}
+  }
+  const savedTheme = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();
+  applyTheme(savedTheme || "dark");
+  themeToggle.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+  });
+
+  // ---------- State ----------
+  const logsBody = document.getElementById("logsBody");
+  const totalAttemptsEl = document.getElementById("totalAttempts");
+  const successCountEl = document.getElementById("successCount");
+  const failedCountEl = document.getElementById("failedCount");
+  const successRateEl = document.getElementById("successRate");
+  const wsStatus = document.getElementById("wsStatus");
+
+  let entries = [];
+  let filter = "all";
+
+  function fmtTime(iso) {
+    try { return new Date(iso + "Z").toLocaleString(); } catch { return iso; }
+  }
+  function escape(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function renderSummary() {
+    const total = entries.length;
+    const ok = entries.filter(e => e.success).length;
+    const fail = total - ok;
+    totalAttemptsEl.textContent = total;
+    successCountEl.textContent = ok;
+    failedCountEl.textContent = fail;
+    successRateEl.textContent = total === 0 ? "—" : Math.round((ok / total) * 100) + "%";
+  }
+
+  function renderTable() {
+    const filtered = entries.filter(e => {
+      if (filter === "failed") return !e.success;
+      if (filter === "success") return e.success;
+      return true;
+    });
+    if (filtered.length === 0) {
+      logsBody.innerHTML = `<tr><td colspan="8" class="empty">No log entries to show.</td></tr>`;
+      return;
+    }
+    logsBody.innerHTML = filtered.map(e => `
+      <tr>
+        <td class="mono">${fmtTime(e.at)}</td>
+        <td>
+          <div>${escape(e.lead_name)}</div>
+          <div class="sub">${escape(e.lead_email)} · ${escape(e.lead_company)}</div>
+        </td>
+        <td>#${e.attempt}</td>
+        <td><span class="pill pill-${e.success ? 'success' : 'failed'}">${e.success ? 'success' : 'failed'}</span></td>
+        <td><span class="pill pill-mode">${escape(e.mode)}</span></td>
+        <td class="mono">${e.contact_id || '—'}</td>
+        <td>${e.error ? `<div class="err-box">${escape(e.error)}</div>` : '—'}</td>
+        <td>${!e.success ? `<button class="retry-btn" data-id="${e.lead_id}">Retry</button>` : '—'}</td>
+      </tr>
+    `).join("");
+  }
+
+  document.querySelectorAll(".seg button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".seg button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      filter = b.dataset.filter;
+      renderTable();
+    });
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", load);
+
+  logsBody.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".retry-btn");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    btn.disabled = true; btn.textContent = "…";
+    try {
+      await fetch(`/api/leads/${id}/retry`, { method: "POST" });
+      setTimeout(load, 1500); // refresh after sync runs
+    } catch {
+      btn.disabled = false; btn.textContent = "Retry";
+    }
+  });
+
+  async function load() {
+    const r = await fetch("/api/logs");
+    const data = await r.json();
+    entries = data.entries || [];
+    renderSummary();
+    renderTable();
+  }
+
+  // ----- WebSocket for live updates -----
+  let ws;
+  function connect() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen = () => { wsStatus.textContent = "Live"; };
+    ws.onclose = () => {
+      wsStatus.textContent = "Reconnecting…";
+      setTimeout(connect, 1500);
+    };
+    ws.onerror = () => { wsStatus.textContent = "Error"; };
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "sync.attempt") {
+        // Prepend new attempt
+        entries.unshift({
+          at: msg.attempt.at,
+          attempt: msg.attempt.attempt,
+          success: msg.attempt.success,
+          contact_id: msg.attempt.contact_id,
+          error: msg.attempt.error,
+          mode: msg.attempt.mode,
+          lead_id: msg.lead_id,
+          lead_name: msg.lead_name,
+          lead_email: msg.lead_email,
+          lead_company: "",
+        });
+        renderSummary();
+        renderTable();
+      }
+    };
+  }
+
+  load();
+  connect();
+</script>
+</body>
+</html>
