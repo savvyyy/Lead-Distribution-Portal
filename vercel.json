@@ -16,16 +16,16 @@
       "dest": "main.py"
     },
     {
-      "src": "/dashboard",
+      "src": "/ws",
       "dest": "main.py"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "static/dashboard.html"
     },
     {
       "src": "/logs",
-      "dest": "main.py"
-    },
-    {
-      "src": "/ws",
-      "dest": "main.py"
+      "dest": "static/logs.html"
     },
     {
       "src": "/(.*)",
